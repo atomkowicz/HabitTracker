@@ -59,7 +59,7 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
-    public void selectHabits() {
+    private void selectHabits() {
 
         // Create and/or open a database to read from it
         SQLiteDatabase db = habitDbHelper.getReadableDatabase();
