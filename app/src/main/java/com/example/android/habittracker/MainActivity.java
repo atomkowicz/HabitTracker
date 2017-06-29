@@ -1,16 +1,11 @@
 package com.example.android.habittracker;
 
 import android.content.ContentValues;
+import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
 import android.os.Bundle;
-import android.support.design.widget.FloatingActionButton;
-import android.support.design.widget.Snackbar;
 import android.support.v7.app.AppCompatActivity;
-import android.support.v7.widget.Toolbar;
 import android.util.Log;
-import android.view.Menu;
-import android.view.MenuItem;
-import android.view.View;
 import com.example.android.habittracker.data.HabitContract.HabitEntry;
 import com.example.android.habittracker.data.HabitDbHelper;
 
@@ -24,22 +19,25 @@ public class MainActivity extends AppCompatActivity {
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        setContentView(R.layout.activity_main);
-        Toolbar toolbar = (Toolbar) findViewById(R.id.toolbar);
-        setSupportActionBar(toolbar);
-
-        FloatingActionButton fab = (FloatingActionButton) findViewById(R.id.fab);
-        fab.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View view) {
-                Snackbar.make(view, "Replace with your own action", Snackbar.LENGTH_LONG)
-                        .setAction("Action", null).show();
-            }
-        });
 
         // To access our database, we instantiate our subclass of SQLiteOpenHelper
         // and pass the context, which is the current activity.
         habitDbHelper = new HabitDbHelper(this);
+
+        long insertResult;
+
+        // insert some data rows into the database
+        insertResult = insertHabit("jogging", HabitEntry.HABIT_SPORT);
+        Log.v("MainActivity", "insertHabit() returned " + insertResult);
+        insertResult = insertHabit("watching movies", HabitEntry.HABIT_ENTERTAINMENT);
+        Log.v("MainActivity", "insertHabit() returned " + insertResult);
+
+        // test for bad method arguments
+        insertResult = insertHabit("watching movies", 1000);
+        Log.v("MainActivity", "insertHabit() returned " + insertResult);
+
+        // list all rows
+        selectHabits();
     }
 
     private long insertHabit(String habitName, int habitType) {
@@ -56,29 +54,56 @@ public class MainActivity extends AppCompatActivity {
         } else {
             ContentValues values = new ContentValues();
             values.put(HabitEntry.COLUMN_HABIT_NAME, habitName.trim());
-            values.put(HabitEntry.COLUMN_HABIT_TYPE, habitName);
+            values.put(HabitEntry.COLUMN_HABIT_TYPE, habitType);
             return db.insert(HabitEntry.TABLE_NAME, null, values);
         }
     }
 
-    private void selectHabits() {
+    public void selectHabits() {
 
-    }
+        // Create and/or open a database to read from it
+        SQLiteDatabase db = habitDbHelper.getReadableDatabase();
 
-    @Override
-    public boolean onCreateOptionsMenu(Menu menu) {
-        // Inflate the menu; this adds items to the action bar if it is present.
-        getMenuInflater().inflate(R.menu.menu_main, menu);
-        return true;
-    }
+        // Define a projection that specifies which columns from the database
+        // you will actually use after this query.
+        String[] projection = {
+                HabitEntry._ID,
+                HabitEntry.COLUMN_HABIT_NAME,
+                HabitEntry.COLUMN_HABIT_TYPE
+        };
 
-    @Override
-    public boolean onOptionsItemSelected(MenuItem item) {
-        // Handle action bar item clicks here. The action bar will
-        // automatically handle clicks on the Home/Up button, so long
-        // as you specify a parent activity in AndroidManifest.xml.
-        int id = item.getItemId();
+        // How you want the results sorted in the resulting Cursor
+        String sortOrder =
+                HabitEntry._ID + " ASC";
 
-        return super.onOptionsItemSelected(item);
+        // Perform this raw SQL query "SELECT * FROM pets"
+        // to get a Cursor that contains all rows from the pets table.
+        Cursor cursor = db.query(
+                HabitEntry.TABLE_NAME,     // The table to query
+                projection,                // The columns to return
+                null,                      // The columns for the WHERE clause
+                null,                      // The values for the WHERE clause
+                null,                      // don't group the rows
+                null,                      // don't filter by row groups
+                sortOrder                  // The sort order
+        );
+
+        try {
+            Log.v("HabitTracker", "Number of rows in database table: " + cursor.getCount() + "\n\n");
+
+            int idColumnIndex = cursor.getColumnIndex(HabitEntry._ID);
+            int nameColumnIndex = cursor.getColumnIndex(HabitEntry.COLUMN_HABIT_NAME);
+            int typeColumnIndex = cursor.getColumnIndex(HabitEntry.COLUMN_HABIT_TYPE);
+
+            while (cursor.moveToNext()) {
+                int currentId = cursor.getInt(idColumnIndex);
+                String currentName = cursor.getString(nameColumnIndex);
+                int currentType = cursor.getInt(typeColumnIndex);
+
+                Log.v("HabitTracker", currentId + " - " + currentName + " - " + currentType + " - ");
+            }
+        } finally {
+            cursor.close();
+        }
     }
 }
