@@ -15,6 +15,7 @@ public class MainActivity extends AppCompatActivity {
 
     // Database helper
     private HabitDbHelper habitDbHelper;
+    private Cursor cursor;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -36,8 +37,26 @@ public class MainActivity extends AppCompatActivity {
         insertResult = insertHabit("watching movies", 1000);
         Log.v("MainActivity", "insertHabit() returned " + insertResult);
 
-        // list all rows
-        selectHabits();
+        // get list of all rows
+        cursor = selectHabits();
+
+        try {
+            Log.v("HabitTracker", "Number of rows in database table: " + cursor.getCount() + "\n\n");
+
+            int idColumnIndex = cursor.getColumnIndex(HabitEntry._ID);
+            int nameColumnIndex = cursor.getColumnIndex(HabitEntry.COLUMN_HABIT_NAME);
+            int typeColumnIndex = cursor.getColumnIndex(HabitEntry.COLUMN_HABIT_TYPE);
+
+            while (cursor.moveToNext()) {
+                int currentId = cursor.getInt(idColumnIndex);
+                String currentName = cursor.getString(nameColumnIndex);
+                int currentType = cursor.getInt(typeColumnIndex);
+
+                Log.v("HabitTracker", currentId + " - " + currentName + " - " + currentType + " - ");
+            }
+        } finally {
+            cursor.close();
+        }
     }
 
     private long insertHabit(String habitName, int habitType) {
@@ -59,7 +78,7 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
-    private void selectHabits() {
+    private Cursor selectHabits() {
 
         // Create and/or open a database to read from it
         SQLiteDatabase db = habitDbHelper.getReadableDatabase();
@@ -78,7 +97,7 @@ public class MainActivity extends AppCompatActivity {
 
         // Perform this raw SQL query "SELECT * FROM pets"
         // to get a Cursor that contains all rows from the pets table.
-        Cursor cursor = db.query(
+        cursor = db.query(
                 HabitEntry.TABLE_NAME,     // The table to query
                 projection,                // The columns to return
                 null,                      // The columns for the WHERE clause
@@ -87,23 +106,6 @@ public class MainActivity extends AppCompatActivity {
                 null,                      // don't filter by row groups
                 sortOrder                  // The sort order
         );
-
-        try {
-            Log.v("HabitTracker", "Number of rows in database table: " + cursor.getCount() + "\n\n");
-
-            int idColumnIndex = cursor.getColumnIndex(HabitEntry._ID);
-            int nameColumnIndex = cursor.getColumnIndex(HabitEntry.COLUMN_HABIT_NAME);
-            int typeColumnIndex = cursor.getColumnIndex(HabitEntry.COLUMN_HABIT_TYPE);
-
-            while (cursor.moveToNext()) {
-                int currentId = cursor.getInt(idColumnIndex);
-                String currentName = cursor.getString(nameColumnIndex);
-                int currentType = cursor.getInt(typeColumnIndex);
-
-                Log.v("HabitTracker", currentId + " - " + currentName + " - " + currentType + " - ");
-            }
-        } finally {
-            cursor.close();
-        }
+        return cursor;
     }
 }
